@@ -20,7 +20,7 @@ import RxRealm
     public typealias TableCellFactory<E: Object> = (RxTableViewRealmDataSource<E>, UITableView, IndexPath, E) -> UITableViewCell
     public typealias TableCellConfig<E: Object, CellType: UITableViewCell> = (CellType, IndexPath, E) -> Void
 
-    open class RxTableViewRealmDataSource<E: Object>: NSObject, UITableViewDataSource {
+    public class RxTableViewRealmDataSource<E: Object>: NSObject, UITableViewDataSource {
 
         private var items: AnyRealmCollection<E>?
 
@@ -36,6 +36,9 @@ import RxRealm
         public var headerTitle: String?
         public var footerTitle: String?
 
+        public weak var delegate: UITableViewDelegate?
+        public weak var dataSource: UITableViewDataSource?
+        
         // MARK: - Init
         public let cellIdentifier: String
         public let cellFactory: TableCellFactory<E>
@@ -80,6 +83,23 @@ import RxRealm
             return footerTitle
         }
 
+        // MARK: - Proxy unimplemented data source and delegate methods
+        public override func responds(to aSelector: Selector!) -> Bool {
+            if RxTableViewRealmDataSource.instancesRespond(to: aSelector) {
+                return true
+            } else if let delegate = delegate {
+                return delegate.responds(to: aSelector)
+            } else if let dataSource = dataSource {
+                return dataSource.responds(to: aSelector)
+            } else {
+                return false
+            }
+        }
+        
+        public override func forwardingTarget(for aSelector: Selector!) -> Any? {
+            return delegate ?? dataSource
+        }
+        
         // MARK: - Applying changeset to the table view
         private let fromRow = {(row: Int) in return IndexPath(row: row, section: 0)}
 
